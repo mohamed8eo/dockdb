@@ -10,6 +10,20 @@ import (
 	"github.com/pterm/pterm"
 )
 
+// minCheckSpinnerDuration keeps the "Checking for image" spinner
+// visible for at least this long. The underlying check is a local
+// Docker API call and normally resolves in a few milliseconds,
+// which reads as if no check happened at all.
+const minCheckSpinnerDuration = 350 * time.Millisecond
+
+// waitForMinDuration sleeps just enough so that at least min has
+// elapsed since start, doing nothing if it already has.
+func waitForMinDuration(start time.Time, min time.Duration) {
+	if remaining := min - time.Since(start); remaining > 0 {
+		time.Sleep(remaining)
+	}
+}
+
 func ensureImage(
 	ctx context.Context,
 	cli *client.Client,
@@ -34,8 +48,12 @@ func ensureImage(
 		return fmt.Errorf("starting spinner: %w", err)
 	}
 
+	checkStarted := time.Now()
+
 	exists, err := imageExists(ctx, cli, image)
 	if err != nil {
+		waitForMinDuration(checkStarted, minCheckSpinnerDuration)
+
 		spinner.Fail(
 			fmt.Sprintf(
 				"Failed to check image %q: %v",
@@ -48,6 +66,8 @@ func ensureImage(
 	}
 
 	if exists {
+		waitForMinDuration(checkStarted, minCheckSpinnerDuration)
+
 		spinner.Success(
 			fmt.Sprintf(
 				"Image %q already exists locally",
@@ -58,6 +78,8 @@ func ensureImage(
 		return nil
 	}
 
+	waitForMinDuration(checkStarted, minCheckSpinnerDuration)
+
 	// Resolves the spinner into a warning line and removes the
 	// spinner animation, the pull progress bars take over from
 	// here in the same live area.
@@ -66,11 +88,6 @@ func ensureImage(
 			"Image %q not found locally",
 			image,
 		),
-	)
-
-	pterm.Info.WithWriter(multi.NewWriter()).Printfln(
-		"Pulling %q image",
-		image,
 	)
 
 	return pullImage(
@@ -87,12 +104,30 @@ func pullImage(
 	image string,
 	multi *pterm.MultiPrinter,
 ) error {
+	spinner, err := pterm.DefaultSpinner.
+		WithWriter(multi.NewWriter()).
+		WithText(fmt.Sprintf(
+			"Pulling %q image...",
+			image,
+		)).Start()
+	if err != nil {
+		return fmt.Errorf("starting spinner: %w", err)
+	}
+
 	reader, err := cli.ImagePull(
 		ctx,
 		image,
 		client.ImagePullOptions{},
 	)
 	if err != nil {
+		spinner.Fail(
+			fmt.Sprintf(
+				"Failed to pull image %q: %v",
+				image,
+				err,
+			),
+		)
+
 		return fmt.Errorf(
 			"pulling image %q: %w",
 			image,
@@ -100,6 +135,13 @@ func pullImage(
 		)
 	}
 	defer reader.Close()
+
+	spinner.Success(
+		fmt.Sprintf(
+			"Pulling %q image",
+			image,
+		),
+	)
 
 	return renderPullProgress(
 		reader,
