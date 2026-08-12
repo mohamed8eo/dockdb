@@ -5,12 +5,15 @@ package cmd
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/mohamed8eo/dockdb/internal/database"
 	"github.com/mohamed8eo/dockdb/internal/docker"
 	"github.com/mohamed8eo/dockdb/internal/logger"
+	"github.com/mohamed8eo/dockdb/internal/ui"
 	"github.com/spf13/cobra"
 )
 
@@ -51,36 +54,72 @@ Examples:
   # Run the container in the background
   dockdb init --db postgres --detached`,
 	Run: func(cmd *cobra.Command, args []string) {
-		parsedDBType, err := database.ParseType(dbType)
+		cfg, err := initConfig(cmd)
 		if err != nil {
-			logger.Error("failed to parse database type", "error", err)
+			if errors.Is(err, ui.ErrPromptCancelled) {
+				return
+			}
+			logger.Error("failed to configure database", "error", err)
 			return
 		}
 
-		ctx, cancel := context.WithTimeout(context.Background(), 240*time.Second)
-		defer cancel()
-
-		cli, err := docker.NewClient()
-		if err != nil {
-			logger.Fatal("failed to connect to docker", "error", err)
-		}
-		defer cli.Close()
-
-		cfg := database.Config{
-			Name:     name,
-			Type:     parsedDBType,
-			Port:     port,
-			Password: password,
-			Detached: detached,
-		}
-
-		id, err := docker.CreateAndStart(ctx, cli, cfg.ToContainerSpec())
-		if err != nil {
-			logger.Fatal("failed to start database", "error", err)
-		}
-
-		fmt.Printf("Started %s container: %s\n", parsedDBType, id[:12])
+		startDatabase(cfg)
 	},
+}
+
+func initConfig(cmd *cobra.Command) (database.Config, error) {
+	if cmd.Flags().NFlag() == 0 {
+		printDynamicBanner("DOCKERDB")
+
+		answers, err := ui.Create()
+		if err != nil {
+			return database.Config{}, err
+		}
+
+		parsedDBType, err := database.ParseType(answers.DBType)
+		if err != nil {
+			return database.Config{}, err
+		}
+
+		return database.Config{
+			Name:     answers.Name,
+			Type:     parsedDBType,
+			Port:     strconv.Itoa(answers.Port),
+			Password: answers.Password,
+			Detached: answers.Detach,
+		}, nil
+	}
+
+	parsedDBType, err := database.ParseType(dbType)
+	if err != nil {
+		return database.Config{}, err
+	}
+
+	return database.Config{
+		Name:     name,
+		Type:     parsedDBType,
+		Port:     port,
+		Password: password,
+		Detached: detached,
+	}, nil
+}
+
+func startDatabase(cfg database.Config) {
+	ctx, cancel := context.WithTimeout(context.Background(), 240*time.Second)
+	defer cancel()
+
+	cli, err := docker.NewClient()
+	if err != nil {
+		logger.Fatal("failed to connect to docker", "error", err)
+	}
+	defer cli.Close()
+
+	id, err := docker.CreateAndStart(ctx, cli, cfg.ToContainerSpec())
+	if err != nil {
+		logger.Fatal("failed to start database", "error", err)
+	}
+
+	fmt.Printf("Started %s container: %s\n", cfg.Type, id[:12])
 }
 
 func init() {

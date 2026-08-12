@@ -1,10 +1,9 @@
 package ui
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
-
-	"github.com/pterm/pterm"
 )
 
 type CreateConfig struct {
@@ -16,55 +15,26 @@ type CreateConfig struct {
 }
 
 func Create() (CreateConfig, error) {
-	name, err := pterm.DefaultInteractiveTextInput.
-		WithDefaultValue("my-database").
-		Show("Database name")
+	result, err := newCreateForm().run()
 	if err != nil {
 		return CreateConfig{}, err
 	}
-
-	portString, err := pterm.DefaultInteractiveTextInput.
-		WithDefaultValue("5432").
-		Show("Port")
-	if err != nil {
-		return CreateConfig{}, err
+	if result.cancelled {
+		return CreateConfig{}, ErrPromptCancelled
 	}
 
-	port, err := strconv.Atoi(portString)
+	port, err := strconv.Atoi(result.port())
 	if err != nil {
 		return CreateConfig{}, fmt.Errorf("invalid port: %w", err)
 	}
 
-	passwordInput := pterm.DefaultInteractiveTextInput.WithMask("*")
-	passwordInput.Show("Password")
-	if err != nil {
-		return CreateConfig{}, err
-	}
-
-	dbType, err := pterm.DefaultInteractiveSelect.
-		WithOptions(
-			[]string{
-				"PostgreSQL",
-				"MySQL",
-			},
-		).
-		Show("Database type")
-	if err != nil {
-		return CreateConfig{}, err
-	}
-
-	detach, err := pterm.DefaultInteractiveConfirm.
-		WithDefaultValue(true).
-		Show("Run container in detached mode?")
-	if err != nil {
-		return CreateConfig{}, err
-	}
-
 	return CreateConfig{
-		Name:     name,
+		Name:     result.name(),
 		Port:     port,
-		Password: passwordInput.DefaultText,
-		DBType:   dbType,
-		Detach:   detach,
+		Password: result.inputs[2].Value(),
+		DBType:   result.dbType(),
+		Detach:   result.detached(),
 	}, nil
 }
+
+var ErrPromptCancelled = errors.New("setup cancelled")
