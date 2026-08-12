@@ -60,6 +60,12 @@ func renderPullProgress(
 	// value for every layer.
 	previous := make(map[string]int64)
 
+	// Docker's "Pull complete" / "Already exists" messages
+	// arrive with an empty progressDetail (no Total), so we
+	// can't rely on the per-message total to finish the bar.
+	// Remember each layer's Total when its bar is created.
+	totals := make(map[string]int64)
+
 	scanner := bufio.NewScanner(reader)
 
 	// Docker normally sends small JSON lines, but increase the
@@ -148,6 +154,7 @@ func renderPullProgress(
 
 			progressbars[msg.ID] = pb
 			previous[msg.ID] = 0
+			totals[msg.ID] = total
 		}
 
 		pb, exists := progressbars[msg.ID]
@@ -193,19 +200,21 @@ func renderPullProgress(
 			completeProgressbar(
 				pb,
 				current,
-				total,
+				totals[msg.ID],
 			)
 
 			delete(previous, msg.ID)
+			delete(totals, msg.ID)
 
 		case "Already exists":
 			completeProgressbar(
 				pb,
 				current,
-				total,
+				totals[msg.ID],
 			)
 
 			delete(previous, msg.ID)
+			delete(totals, msg.ID)
 
 		case "Download complete":
 			// The layer has finished downloading, but Docker

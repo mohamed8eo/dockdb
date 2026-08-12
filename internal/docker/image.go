@@ -58,12 +58,20 @@ func ensureImage(
 		return nil
 	}
 
-	pterm.Warning.Printfln(
-		"Image %q not found locally",
-		image,
+	// Resolves the spinner into a warning line and removes the
+	// spinner animation, the pull progress bars take over from
+	// here in the same live area.
+	spinner.Warning(
+		fmt.Sprintf(
+			"Image %q not found locally",
+			image,
+		),
 	)
 
-	pterm.Info.Printfln("Pulling %q image", image)
+	pterm.Info.WithWriter(multi.NewWriter()).Printfln(
+		"Pulling %q image",
+		image,
+	)
 
 	return pullImage(
 		ctx,
