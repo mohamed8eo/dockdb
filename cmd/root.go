@@ -5,8 +5,12 @@ Copyright © 2026 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
+	"fmt"
 	"os"
+	"strings"
 
+	"github.com/mohamed8eo/dockdb/internal/logger"
+	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 )
 
@@ -22,9 +26,9 @@ examples and usage of using your application. For example:
 Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
-	// Uncomment the following line if your bare application
-	// has an action associated with it:
-	// Run: func(cmd *cobra.Command, args []string) { },
+	Run: func(cmd *cobra.Command, args []string) {
+		printDynamicBanner("DOCKERDB")
+	},
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -32,6 +36,7 @@ to quickly create a Cobra application.`,
 func Execute() {
 	err := rootCmd.Execute()
 	if err != nil {
+		logger.Error("command execution failed", "error", err)
 		os.Exit(1)
 	}
 }
@@ -46,6 +51,38 @@ func init() {
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
 	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+}
+
+func printDynamicBanner(text string) {
+	bigText, _ := pterm.DefaultBigText.WithLetters(
+		pterm.NewLettersFromString(text),
+	).Srender()
+
+	lines := strings.Split(bigText, "\n")
+
+	// Exact Laravel gradient colors (top to bottom)
+	colors := []string{
+		"#06B6D4", // Cyan
+		"#38BDF8", // Light Blue
+		"#3B82F6", // Blue
+		"#2563EB", // Dark Blue
+		"#7C3AED", // Purple
+	}
+
+	fmt.Println()
+	for i, line := range lines {
+		if strings.TrimSpace(line) == "" {
+			continue
+		}
+		colorHex := colors[i%len(colors)]
+		rgb, err := pterm.NewRGBFromHEX(colorHex)
+		if err == nil {
+			fmt.Println(rgb.Sprint(line))
+		} else {
+			fmt.Println(line)
+		}
+	}
+	fmt.Println()
 }
 
 
