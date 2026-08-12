@@ -29,8 +29,7 @@ func ensureImage(
 		WithText(fmt.Sprintf(
 			"Checking for image %q...",
 			image,
-		)).
-		Start()
+		)).Start()
 	if err != nil {
 		return fmt.Errorf("starting spinner: %w", err)
 	}
@@ -59,14 +58,12 @@ func ensureImage(
 		return nil
 	}
 
-	// Change the existing spinner into a completed
-	// "not found" message.
-	spinner.Warning(
-		fmt.Sprintf(
-			"Image %q not found locally",
-			image,
-		),
+	pterm.Warning.Printfln(
+		"Image %q not found locally",
+		image,
 	)
+
+	pterm.Info.Printfln("Pulling %q image", image)
 
 	return pullImage(
 		ctx,

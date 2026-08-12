@@ -1,6 +1,5 @@
 /*
 Copyright © 2026 NAME HERE <EMAIL ADDRESS>
-
 */
 package cmd
 
@@ -10,11 +9,10 @@ import (
 	"strings"
 
 	"github.com/mohamed8eo/dockdb/internal/logger"
+	"github.com/mohamed8eo/dockdb/internal/ui"
 	"github.com/pterm/pterm"
 	"github.com/spf13/cobra"
 )
-
-
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -28,6 +26,21 @@ This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		printDynamicBanner("DOCKERDB")
+
+		fmt.Println("\n\n")
+
+		config, err := ui.Create()
+		if err != nil {
+			logger.Error("Error: %q", err)
+		}
+
+		fmt.Println()
+		fmt.Println("Configuration:")
+		fmt.Printf("Name: %s\n", config.Name)
+		fmt.Printf("Port: %d\n", config.Port)
+		fmt.Printf("Password: %s\n", config.Password)
+		fmt.Printf("Database: %s\n", config.DBType)
+		fmt.Printf("Detached: %t\n", config.Detach)
 	},
 }
 
@@ -84,5 +97,3 @@ func printDynamicBanner(text string) {
 	}
 	fmt.Println()
 }
-
-
