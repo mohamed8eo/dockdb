@@ -51,7 +51,7 @@ Examples:
   # Run the container in the background
   dockdb init --db postgres --detached`,
 	Run: func(cmd *cobra.Command, args []string) {
-		parsedDbType, err := database.ParseType(dbType)
+		parsedDBType, err := database.ParseType(dbType)
 		if err != nil {
 			logger.Error("failed to parse database type", "error", err)
 			return
@@ -68,7 +68,7 @@ Examples:
 
 		cfg := database.Config{
 			Name:     name,
-			Type:     parsedDbType,
+			Type:     parsedDBType,
 			Port:     port,
 			Password: password,
 			Detached: detached,
@@ -79,7 +79,7 @@ Examples:
 			logger.Fatal("failed to start database", "error", err)
 		}
 
-		fmt.Printf("Started %s container: %s\n", parsedDbType, id[:12])
+		fmt.Printf("Started %s container: %s\n", parsedDBType, id[:12])
 	},
 }
 
