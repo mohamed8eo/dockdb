@@ -21,5 +21,6 @@ func (c Config) postgresSpec() docker.ContainerSpec {
 			"managed-by": "dockdb",
 			"db-type":    "postgres",
 		},
+		Restart: c.Restart,
 	}
 }

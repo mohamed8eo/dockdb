@@ -7,7 +7,7 @@ const (
 	MySqlDefaultPort = "3306/tcp"
 )
 
-func (c Config) mySqlSpac() docker.ContainerSpec {
+func (c Config) mySQLSpec() docker.ContainerSpec {
 	return docker.ContainerSpec{
 		Name:        c.Name,
 		Image:       MySqlImage,
@@ -21,5 +21,6 @@ func (c Config) mySqlSpac() docker.ContainerSpec {
 			"managed-by": "dockdb",
 			"db-type":    "mysql",
 		},
+		Restart: c.Restart,
 	}
 }

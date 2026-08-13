@@ -9,6 +9,7 @@ import (
 	"github.com/moby/moby/api/types/network"
 	"github.com/moby/moby/client"
 	"github.com/mohamed8eo/dockdb/internal/logger"
+	"github.com/mohamed8eo/dockdb/internal/system"
 	"github.com/pterm/pterm"
 )
 
@@ -19,12 +20,16 @@ type ContainerSpec struct {
 	Labels      map[string]string
 	ExposedPort string // container-side port, e.g. "5432/tcp"
 	HostPort    string // host-side port, e.g. "5432"
+	Restart     bool
 }
 
 func CreateAndStart(ctx context.Context, cli *client.Client, spec ContainerSpec) (containerID string, err error) {
 	if err = ensureImage(ctx, cli, spec.Image); err != nil {
 		return "", err
 	}
+
+	// Separate the completed image pull from the container lifecycle output.
+	fmt.Println()
 
 	exposedPort, err := network.ParsePort(spec.ExposedPort)
 	if err != nil {
@@ -64,15 +69,48 @@ func createContainer(
 		},
 	}
 
-	hostConfig := &container.HostConfig{
-		PortBindings: network.PortMap{
-			exposedPort: []network.PortBinding{
-				{
-					HostIP:   netip.MustParseAddr("0.0.0.0"),
-					HostPort: spec.HostPort,
+	var hostConfig *container.HostConfig
+	if spec.Restart {
+		enabled, err := system.IsDockerEnabledOnBoot()
+		if err != nil {
+			logger.Warn("could not check docker boot status", "error", err)
+		}
+		if !enabled {
+			logger.Warn("docker is not enabled to start on boot; container restart policy won't survive a reboot ")
+		}
+
+		fmt.Println("Enable Docker in Boot")
+		system.EnableDockerOnBoot()
+
+		hostConfig = &container.HostConfig{
+			PortBindings: network.PortMap{
+				exposedPort: []network.PortBinding{
+					{
+						HostIP:   netip.MustParseAddr("0.0.0.0"),
+						HostPort: spec.HostPort,
+					},
 				},
 			},
-		},
+			// auto restart the container after reboot
+			RestartPolicy: container.RestartPolicy{
+				Name: "always",
+			},
+		}
+	} else {
+		hostConfig = &container.HostConfig{
+			PortBindings: network.PortMap{
+				exposedPort: []network.PortBinding{
+					{
+						HostIP:   netip.MustParseAddr("0.0.0.0"),
+						HostPort: spec.HostPort,
+					},
+				},
+			},
+			RestartPolicy: container.RestartPolicy{
+				Name:              "on-failure",
+				MaximumRetryCount: 2,
+			},
+		}
 	}
 
 	resp, err := cli.ContainerCreate(ctx, client.ContainerCreateOptions{

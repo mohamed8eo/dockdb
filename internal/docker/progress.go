@@ -117,44 +117,32 @@ func renderPullProgress(
 
 		total := msg.ProgressDetail.Total
 
-		// Create a progress bar only when Docker tells us
-		// the total size of the layer.
+		// Create a progress bar when Docker tells us the total size
+		// of the layer. Completed layers remain active in the live
+		// area so every layer stays visible through the end of the pull.
 		if _, exists := progressbars[msg.ID]; !exists &&
 			total > 0 {
-
-			if total > int64(maxInt()) {
-				return fmt.Errorf(
-					"layer %q is too large for pterm progressbar",
-					msg.ID,
-				)
-			}
-
-			pb, err := pterm.DefaultProgressbar.
-				WithTotal(int(total)).
-				WithWriter(makeResettingWriter(multi)).
-				WithShowElapsedTime(false).
-				WithShowPercentage(true).
-				WithShowCount(false).
-				WithRemoveWhenDone(false).
-				Start(
-					fmt.Sprintf(
-						"%s [%s / %s]",
-						shortLayerID(msg.ID),
-						formatBytes(0),
-						formatBytes(total),
-					),
-				)
+			pb, err := startLayerProgress(multi, msg.ID, total)
 			if err != nil {
-				return fmt.Errorf(
-					"creating progressbar for layer %q: %w",
-					msg.ID,
-					err,
-				)
+				return err
 			}
 
 			progressbars[msg.ID] = pb
 			previous[msg.ID] = 0
 			totals[msg.ID] = total
+		}
+
+		// Cached layers do not include a byte total, but they still deserve
+		// a persistent completed row alongside the downloaded layers.
+		if _, exists := progressbars[msg.ID]; !exists &&
+			msg.Status == "Already exists" {
+			pb, err := startLayerProgress(multi, msg.ID, 1)
+			if err != nil {
+				return err
+			}
+
+			progressbars[msg.ID] = pb
+			totals[msg.ID] = 1
 		}
 
 		pb, exists := progressbars[msg.ID]
@@ -168,16 +156,23 @@ func renderPullProgress(
 		// Docker sends the absolute current byte count.
 		// PTerm.Add() needs the difference.
 		if current > last {
+			current = min(current, totals[msg.ID])
 			delta := current - last
 
-			if delta > int64(maxInt()) {
+			if current < totals[msg.ID] && delta > int64(maxInt()) {
 				return fmt.Errorf(
 					"progress delta for layer %q is too large",
 					msg.ID,
 				)
 			}
 
-			pb.Add(int(delta))
+			if current < totals[msg.ID] {
+				pb.Add(int(delta))
+			} else {
+				// PTerm stops and clears a bar when Add reaches its total.
+				// Set Current directly instead so the 100% row stays in place.
+				pb.Current = int(current)
+			}
 
 			previous[msg.ID] = current
 
@@ -199,22 +194,16 @@ func renderPullProgress(
 		case "Pull complete":
 			completeProgressbar(
 				pb,
-				current,
+				msg.ID,
 				totals[msg.ID],
 			)
-
-			delete(previous, msg.ID)
-			delete(totals, msg.ID)
 
 		case "Already exists":
 			completeProgressbar(
 				pb,
-				current,
+				msg.ID,
 				totals[msg.ID],
 			)
-
-			delete(previous, msg.ID)
-			delete(totals, msg.ID)
 
 		case "Download complete":
 			// The layer has finished downloading, but Docker
@@ -237,7 +226,52 @@ func renderPullProgress(
 		)
 	}
 
+	// Some registries finish the stream without emitting a final
+	// "Pull complete" event for every layer. A completed image is the
+	// authoritative signal, so settle any remaining layer rows at 100%.
+	completeRemainingProgressbars(progressbars, totals)
+
 	return nil
+}
+
+func completeRemainingProgressbars(
+	progressbars map[string]*pterm.ProgressbarPrinter,
+	totals map[string]int64,
+) {
+	for id, pb := range progressbars {
+		completeProgressbar(pb, id, totals[id])
+	}
+}
+
+func startLayerProgress(
+	multi *pterm.MultiPrinter,
+	id string,
+	total int64,
+) (*pterm.ProgressbarPrinter, error) {
+	if total > int64(maxInt()) {
+		return nil, fmt.Errorf(
+			"layer %q is too large for pterm progressbar",
+			id,
+		)
+	}
+
+	pb, err := pterm.DefaultProgressbar.
+		WithTotal(int(total)).
+		WithWriter(makeResettingWriter(multi)).
+		WithShowElapsedTime(false).
+		WithShowPercentage(true).
+		WithShowCount(false).
+		WithRemoveWhenDone(false).
+		Start(layerProgressTitle(id, 0, total))
+	if err != nil {
+		return nil, fmt.Errorf(
+			"creating progressbar for layer %q: %w",
+			id,
+			err,
+		)
+	}
+
+	return pb, nil
 }
 
 // completeProgressbar makes sure the progress bar reaches 100%.
@@ -246,29 +280,33 @@ func renderPullProgress(
 // immediately preceding Current value being the exact Total.
 func completeProgressbar(
 	pb *pterm.ProgressbarPrinter,
-	current int64,
+	id string,
 	total int64,
 ) {
 	if total <= 0 {
 		return
 	}
 
-	if current < total {
-		remaining := total - current
+	// Do not use Add here: PTerm stops a progress bar when it reaches
+	// its total, which removes the completed layer from MultiPrinter.
+	pb.Current = int(total)
+	pb.UpdateTitle(layerProgressTitle(id, total, total))
+}
 
-		if remaining <= int64(maxInt()) {
-			pb.Add(int(remaining))
-		}
-	}
-
-	pb.UpdateTitle(
-		fmt.Sprintf(
-			"%s [%s / %s]",
-			"Layer",
-			formatBytes(total),
-			formatBytes(total),
-		),
+func layerProgressTitle(id string, current, total int64) string {
+	return fmt.Sprintf(
+		"%s [%s / %s]",
+		shortLayerID(id),
+		formatBytes(current),
+		formatBytes(total),
 	)
+}
+
+func min(a, b int64) int64 {
+	if a < b {
+		return a
+	}
+	return b
 }
 
 // shortLayerID keeps Docker's long layer ID from taking too

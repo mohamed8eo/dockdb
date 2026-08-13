@@ -19,6 +19,6 @@ func ParseType(s string) (DBType, error) {
 	case "mysql", "mariadb":
 		return MySQL, nil
 	default:
-		return "", fmt.Errorf("unsupported database: %s", s)
+		return "", fmt.Errorf("unsupported database %q, supported values: postgres, mysql", s)
 	}
 }
