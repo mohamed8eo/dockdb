@@ -2,6 +2,7 @@ package system
 
 import (
 	"fmt"
+	"os"
 	"os/exec"
 	"strings"
 )
@@ -22,8 +23,9 @@ func IsDockerEnabledOnBoot() (bool, error) {
 // EnableDockerOnBoot enables docker.service to start on boot. Requires root/sudo.
 func EnableDockerOnBoot() error {
 	cmd := exec.Command("sudo", "systemctl", "enable", "docker")
-	cmd.Stdout = nil
-	cmd.Stderr = nil
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("enabling docker on boot: %w", err)
 	}

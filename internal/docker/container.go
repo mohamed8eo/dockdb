@@ -56,19 +56,6 @@ func createContainer(
 	spec ContainerSpec,
 	exposedPort network.Port,
 ) (client.ContainerCreateResult, error) {
-	spinner, _ := pterm.DefaultSpinner.
-		WithText(fmt.Sprintf("Creating container %q...", spec.Name)).
-		Start()
-
-	containerConfi := &container.Config{
-		Image:  spec.Image,
-		Env:    spec.Env,
-		Labels: spec.Labels,
-		ExposedPorts: network.PortSet{
-			exposedPort: struct{}{},
-		},
-	}
-
 	var hostConfig *container.HostConfig
 	if spec.Restart {
 		enabled, err := system.IsDockerEnabledOnBoot()
@@ -80,7 +67,10 @@ func createContainer(
 		}
 
 		fmt.Println("Enable Docker in Boot")
-		system.EnableDockerOnBoot()
+		if err := system.EnableDockerOnBoot(); err != nil {
+			logger.Warn("failed to enable docker on boot", "error", err)
+		}
+		fmt.Println()
 
 		hostConfig = &container.HostConfig{
 			PortBindings: network.PortMap{
@@ -111,6 +101,19 @@ func createContainer(
 				MaximumRetryCount: 2,
 			},
 		}
+	}
+
+	spinner, _ := pterm.DefaultSpinner.
+		WithText(fmt.Sprintf("Creating container %q...", spec.Name)).
+		Start()
+
+	containerConfi := &container.Config{
+		Image:  spec.Image,
+		Env:    spec.Env,
+		Labels: spec.Labels,
+		ExposedPorts: network.PortSet{
+			exposedPort: struct{}{},
+		},
 	}
 
 	resp, err := cli.ContainerCreate(ctx, client.ContainerCreateOptions{
