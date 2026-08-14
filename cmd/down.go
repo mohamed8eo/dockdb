@@ -1,6 +1,3 @@
-/*
-Copyright © 2026 NAME HERE <EMAIL ADDRESS>
-*/
 package cmd
 
 import (
@@ -12,11 +9,13 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// downCmd represents the down command
 var downCmd = &cobra.Command{
-	Use:   "down <container ID>",
-	Short: "Stop container",
-	Args:  cobra.ExactArgs(1),
+	Use:     "down <container>",
+	Aliases: []string{"stop"},
+	Short:   "Stop a running database container",
+	Long:    `Gracefully stop a running Docker database container by its ID or name.`,
+	Example: `  dockdb down postgresql`,
+	Args:    cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cli, err := docker.NewClient()
 		if err != nil {

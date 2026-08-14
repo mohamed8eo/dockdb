@@ -1,6 +1,3 @@
-/*
-Copyright © 2026 NAME HERE <EMAIL ADDRESS>
-*/
 package cmd
 
 import (
@@ -20,14 +17,23 @@ var (
 	restart  bool
 )
 
-// initCmd represents the init command
 var initCmd = &cobra.Command{
-	Use:   "init",
-	Short: "Create and start a database container",
+	Use:     "init",
+	Aliases: []string{"create", "new"},
+	Short:   "Initialize and start a new database container",
 	Long: `Initialize a database by creating and starting a Docker container.
+Supports PostgreSQL and MySQL.
 
-Supported databases:
-  postgres, mysql`,
+If run without flags, launches an interactive configuration wizard (TUI).
+When flags are provided, runs in headless/CI mode.`,
+	Example: `  # Launch interactive TUI wizard
+  dockdb init
+
+  # Quick start PostgreSQL
+  dockdb init --db postgres --name pg-db --port 5432 --password secret
+
+  # Quick start MySQL with auto-restart enabled
+  dockdb init --db mysql --name mysql-db --port 3306 --password secret --restart`,
 
 	Run: func(cmd *cobra.Command, args []string) {
 		cfg, err := app.ResolveConfig(cmd, restart, dbType, name, password, port)
@@ -46,10 +52,9 @@ Supported databases:
 func init() {
 	rootCmd.AddCommand(initCmd)
 
-	// Flags
-	initCmd.Flags().StringVarP(&name, "name", "n", "postgresql", "db name")
-	initCmd.Flags().StringVarP(&port, "port", "p", "5432", "db port")
-	initCmd.Flags().StringVarP(&password, "password", "e", "postgresql", "db password")
-	initCmd.Flags().StringVarP(&dbType, "db", "t", "postgres", "database type (postgres or mysql)")
-	initCmd.Flags().BoolVarP(&restart, "restart", "r", false, "Rerun db after reboot")
+	initCmd.Flags().StringVarP(&name, "name", "n", "postgresql", "Container name")
+	initCmd.Flags().StringVarP(&port, "port", "p", "5432", "Database port")
+	initCmd.Flags().StringVarP(&password, "password", "e", "postgresql", "Database root password")
+	initCmd.Flags().StringVarP(&dbType, "db", "d", "postgres", "Database type (postgres or mysql)")
+	initCmd.Flags().BoolVarP(&restart, "restart", "r", false, "Enable automatic container restart on reboot")
 }

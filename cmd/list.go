@@ -1,6 +1,3 @@
-/*
-Copyright © 2026 NAME HERE <EMAIL ADDRESS>
-*/
 package cmd
 
 import (
@@ -16,11 +13,14 @@ var (
 	ui  bool
 )
 
-// listCmd represents the list command
 var listCmd = &cobra.Command{
 	Use:     "list",
 	Aliases: []string{"ls"},
-	Short:   "List directory contents",
+	Short:   "List all database containers",
+	Long:    `List all provisioned database containers (running and stopped), or launch the interactive TUI dashboard.`,
+	Example: `  dockdb list
+  dockdb ls --all
+  dockdb list --ui`,
 	Run: func(cmd *cobra.Command, args []string) {
 		if !ui {
 			ctx, cancel := context.WithTimeout(context.TODO(), 2*time.Second)
@@ -37,6 +37,6 @@ var listCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(listCmd)
 
-	listCmd.Flags().BoolVarP(&all, "all", "a", false, "show hidden entries")
-	listCmd.Flags().BoolVarP(&ui, "ui", "i", false, "show TUI Lazy Docker")
+	listCmd.Flags().BoolVarP(&all, "all", "a", false, "Show all containers (including stopped ones)")
+	listCmd.Flags().BoolVarP(&ui, "ui", "i", false, "Launch interactive lazydocker TUI dashboard")
 }

@@ -129,6 +129,45 @@ func DownContainer(ctx context.Context, cli *client.Client, id string) error {
 	return nil
 }
 
+func DeleteContainer(ctx context.Context, cli *client.Client, id string) error {
+	id = strings.TrimSpace(id)
+
+	if id == "" {
+		return fmt.Errorf("container ID cannot be empty")
+	}
+
+	result, err := cli.ContainerInspect(
+		ctx,
+		id,
+		client.ContainerInspectOptions{},
+	)
+	if err != nil {
+		return fmt.Errorf("failed to inspect container %q: %w", id, err)
+	}
+
+	if result.Container.State == nil {
+		return fmt.Errorf("container %q has no state information", id)
+	}
+
+	name := strings.TrimPrefix(result.Container.Name, "/")
+	state := result.Container.State
+
+	if state.Running {
+		if err := stopContainer(ctx, cli, name, id); err != nil {
+			return fmt.Errorf("failed to stop container %q: %w", name, err)
+		}
+	} // TODO: Func Remove the container
+
+	_, err = cli.ContainerRemove(ctx, id, client.ContainerRemoveOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to remove container %q: %w", name, err)
+	}
+
+	logger.Info("Container Deleted ", "name", name)
+
+	return nil
+}
+
 // formatPorts converts the SDK's port slice into docker-ps-style text
 // like "0.0.0.0:5432->5432/tcp". Adjust field names (PublicPort,
 // PrivatePort, IP, Type) to match whatever your client package's

@@ -1,6 +1,3 @@
-/*
-Copyright © 2026 NAME HERE <EMAIL ADDRESS>
-*/
 package cmd
 
 import (
@@ -12,11 +9,13 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// upCmd represents the up command
 var upCmd = &cobra.Command{
-	Use:   "up <container ID>",
-	Short: "Start container",
-	Args:  cobra.ExactArgs(1),
+	Use:     "up <container>",
+	Aliases: []string{"start"},
+	Short:   "Start a stopped database container",
+	Long:    `Start an existing, stopped Docker database container by its ID or name.`,
+	Example: `  dockdb up postgresql`,
+	Args:    cobra.ExactArgs(1),
 
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cli, err := docker.NewClient()

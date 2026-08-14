@@ -1,6 +1,3 @@
-/*
-Copyright © 2026 NAME HERE <EMAIL ADDRESS>
-*/
 package cmd
 
 import (
@@ -10,9 +7,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
-	Use: "dockdb",
+	Use:   "dockdb",
+	Short: "DockDB is a CLI tool to easily provision and manage local database containers",
+	Long: `DockDB is a modern, lightweight command-line utility for spinning up,
+managing, and inspecting local database containers (PostgreSQL, MySQL) via Docker
+with both interactive TUI and headless CLI workflows.`,
 	Run: func(cmd *cobra.Command, args []string) { _ = cmd.Help() },
 }
 
@@ -25,5 +25,4 @@ func Execute() {
 }
 
 func init() {
-	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
