@@ -23,10 +23,11 @@ var listCmd = &cobra.Command{
 	Short:   "List directory contents",
 	Run: func(cmd *cobra.Command, args []string) {
 		if !ui {
-			ctx, cancel := context.WithTimeout(context.TODO(), 5*time.Second)
-			cli, _ := docker.NewClient()
-			docker.ListContainer(ctx, cli, all)
+			ctx, cancel := context.WithTimeout(context.TODO(), 2*time.Second)
 			defer cancel()
+			cli, _ := docker.NewClient()
+			defer cli.Close()
+			docker.ListContainer(ctx, cli, all)
 			return
 		}
 		docker.RunLazydocker()

@@ -7,6 +7,7 @@ import (
 
 	"github.com/moby/moby/api/types/container"
 	"github.com/moby/moby/client"
+	"github.com/mohamed8eo/dockdb/internal/logger"
 	"github.com/mohamed8eo/dockdb/internal/render"
 )
 
@@ -43,6 +44,47 @@ func ListContainer(ctx context.Context, cli *client.Client, all bool) error {
 	}
 
 	render.Containers(rows)
+	return nil
+}
+
+func UpContainer(ctx context.Context, cli *client.Client, id string) error {
+	id = strings.TrimSpace(id)
+
+	if id == "" {
+		return fmt.Errorf("container ID cannot be empty")
+	}
+
+	result, err := cli.ContainerInspect(
+		ctx,
+		id,
+		client.ContainerInspectOptions{},
+	)
+	if err != nil {
+		return fmt.Errorf("failed to inspect container %q: %w", id, err)
+	}
+
+	if result.Container.State == nil {
+		return fmt.Errorf("container %q has no state information", id)
+	}
+
+	name := strings.TrimPrefix(result.Container.Name, "/")
+	state := result.Container.State
+
+	if state.Running {
+		logger.Info("Container is already running")
+		return nil
+	}
+
+	if state.Dead {
+		return fmt.Errorf("container %q is dead", name)
+	}
+
+	if err := startContainer(ctx, cli, name, id); err != nil {
+		return fmt.Errorf("failed to start container %q: %w", name, err)
+	}
+
+	logger.Info("Container started", "name", name)
+
 	return nil
 }
 
