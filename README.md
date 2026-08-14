@@ -10,8 +10,7 @@ an interactive terminal UI or a non-interactive CLI.
 
 ## Install
 
-Download the archive matching your operating system and CPU from the GitHub
-releases page, extract it, and put `dockdb` on your `PATH`.
+Build from source with Go, or download a release archive when one is available.
 
 ## Usage
 
@@ -34,16 +33,8 @@ running it where terminal output is retained if that credential is sensitive.
 
 ## Releasing
 
-The release workflow publishes on a pushed semantic-version tag such as
-`v1.0.0`. It builds Linux, macOS, and Windows binaries for amd64 and arm64,
-uploads archives plus `checksums.txt`, and creates GitHub artifact attestations.
-
-```sh
-git tag v1.0.0
-git push origin v1.0.0
-```
-
-Run a local packaging check before tagging when GoReleaser is installed:
+GitHub Actions is intentionally not configured. To package a release locally,
+install GoReleaser and run:
 
 ```sh
 goreleaser check
