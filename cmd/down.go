@@ -12,12 +12,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// upCmd represents the up command
-var upCmd = &cobra.Command{
-	Use:   "up <container ID>",
-	Short: "Start container",
+// downCmd represents the down command
+var downCmd = &cobra.Command{
+	Use:   "down <container ID>",
+	Short: "Stop container",
 	Args:  cobra.ExactArgs(1),
-
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cli, err := docker.NewClient()
 		if err != nil {
@@ -31,14 +30,13 @@ var upCmd = &cobra.Command{
 		)
 		defer cancel()
 
-		if err := docker.UpContainer(ctx, cli, args[0]); err != nil {
+		if err := docker.DownContainer(ctx, cli, args[0]); err != nil {
 			return err
 		}
-
 		return nil
 	},
 }
 
 func init() {
-	rootCmd.AddCommand(upCmd)
+	rootCmd.AddCommand(downCmd)
 }

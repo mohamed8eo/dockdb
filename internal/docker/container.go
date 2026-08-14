@@ -149,3 +149,22 @@ func startContainer(
 	spinner.Success(fmt.Sprintf("Started container %q", name))
 	return nil
 }
+
+func stopContainer(
+	ctx context.Context,
+	cli *client.Client,
+	name,
+	id string,
+) error {
+	spinner, _ := pterm.DefaultSpinner.
+		WithText(fmt.Sprintf("Stoping container %q...", name)).
+		Start()
+
+	if _, err := cli.ContainerStop(ctx, id, client.ContainerStopOptions{}); err != nil {
+		spinner.Fail(fmt.Sprintf("Failed to stop container %q: %v", name, err))
+		return fmt.Errorf("stoping container %q: %w", name, err)
+	}
+
+	spinner.Success(fmt.Sprintf("Stoped container %q", name))
+	return nil
+}
