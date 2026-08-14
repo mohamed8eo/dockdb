@@ -1,3 +1,5 @@
 test/
 dcokdb
 .env
+dist/
+coverage.out

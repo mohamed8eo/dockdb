@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/mohamed8eo/dockdb/internal/docker"
@@ -21,16 +22,18 @@ var listCmd = &cobra.Command{
 	Example: `  dockdb list
   dockdb ls --all
   dockdb list --ui`,
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		if !ui {
-			ctx, cancel := context.WithTimeout(context.TODO(), 2*time.Second)
+			ctx, cancel := context.WithTimeout(cmd.Context(), 10*time.Second)
 			defer cancel()
-			cli, _ := docker.NewClient()
+			cli, err := docker.NewClient()
+			if err != nil {
+				return fmt.Errorf("create Docker client: %w", err)
+			}
 			defer cli.Close()
-			docker.ListContainer(ctx, cli, all)
-			return
+			return docker.ListContainer(ctx, cli, all)
 		}
-		docker.RunLazydocker()
+		return docker.RunLazydocker()
 	},
 }
 

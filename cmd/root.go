@@ -16,6 +16,9 @@ with both interactive TUI and headless CLI workflows.`,
 	Run: func(cmd *cobra.Command, args []string) { _ = cmd.Help() },
 }
 
+// Version is set at build time by GoReleaser.
+var Version = "dev"
+
 func Execute() {
 	err := rootCmd.Execute()
 	if err != nil {
@@ -25,4 +28,5 @@ func Execute() {
 }
 
 func init() {
+	rootCmd.Version = Version
 }

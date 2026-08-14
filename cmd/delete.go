@@ -16,11 +16,11 @@ var deleteCmd = &cobra.Command{
 	Long:    `Permanently remove a Docker database container and its associated resources by ID or name.`,
 	Example: `  dockdb delete postgresql
   dockdb rm postgresql`,
-	Args:    cobra.ExactArgs(1),
+	Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx, cancel := context.WithTimeout(
-			context.TODO(),
-			1*time.Second,
+			cmd.Context(),
+			10*time.Second,
 		)
 		defer cancel()
 

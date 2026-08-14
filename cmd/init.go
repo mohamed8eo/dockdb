@@ -4,7 +4,6 @@ import (
 	"errors"
 
 	"github.com/mohamed8eo/dockdb/internal/app"
-	"github.com/mohamed8eo/dockdb/internal/logger"
 	"github.com/mohamed8eo/dockdb/internal/tui"
 	"github.com/spf13/cobra"
 )
@@ -35,17 +34,16 @@ When flags are provided, runs in headless/CI mode.`,
   # Quick start MySQL with auto-restart enabled
   dockdb init --db mysql --name mysql-db --port 3306 --password secret --restart`,
 
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, err := app.ResolveConfig(cmd, restart, dbType, name, password, port)
 		if err != nil {
 			if errors.Is(err, tui.ErrPromptCancelled) {
-				return
+				return nil
 			}
-			logger.Error("failed to configure database", "error", err)
-			return
+			return err
 		}
 
-		app.Start(cfg)
+		return app.Start(cmd.Context(), cfg)
 	},
 }
 
