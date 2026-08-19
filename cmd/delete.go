@@ -16,7 +16,7 @@ var deleteCmd = &cobra.Command{
 	Long:    `Permanently remove a Docker database container and its associated resources by ID or name.`,
 	Example: `  dockdb delete postgresql
   dockdb rm postgresql`,
-	Args: cobra.ExactArgs(1),
+	// Args: cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx, cancel := context.WithTimeout(
 			cmd.Context(),
@@ -29,7 +29,7 @@ var deleteCmd = &cobra.Command{
 			return fmt.Errorf("failed to create Docker client: %w", err)
 		}
 		defer cli.Close()
-		if err := docker.DeleteContainer(ctx, cli, args[0]); err != nil {
+		if err := docker.DeleteContainer(ctx, cli, args[0:]); err != nil {
 			return fmt.Errorf("failed to delete container: %w", err)
 		}
 		return nil
