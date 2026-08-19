@@ -10,12 +10,12 @@ import (
 )
 
 var downCmd = &cobra.Command{
-	Use:     "down <container>",
+	Use:     "down <container>...",
 	Aliases: []string{"stop"},
 	Short:   "Stop a running database container",
 	Long:    `Gracefully stop a running Docker database container by its ID or name.`,
 	Example: `  dockdb down postgresql`,
-	Args:    cobra.ExactArgs(1),
+	Args:    cobra.MinimumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cli, err := docker.NewClient()
 		if err != nil {
@@ -29,7 +29,7 @@ var downCmd = &cobra.Command{
 		)
 		defer cancel()
 
-		if err := docker.DownContainer(ctx, cli, args[0]); err != nil {
+		if err := docker.DownContainer(ctx, cli, args[0:]); err != nil {
 			return err
 		}
 		return nil

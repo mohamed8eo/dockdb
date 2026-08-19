@@ -10,13 +10,13 @@ import (
 )
 
 var deleteCmd = &cobra.Command{
-	Use:     "delete <container>",
+	Use:     "delete <container>...",
 	Aliases: []string{"rm", "remove"},
-	Short:   "Delete a database container",
-	Long:    `Permanently remove a Docker database container and its associated resources by ID or name.`,
+	Short:   "Delete database containers",
+	Long:    `Permanently remove one or more Docker database containers and their associated resources by ID or name.`,
 	Example: `  dockdb delete postgresql
-  dockdb rm postgresql`,
-	// Args: cobra.ExactArgs(1),
+  dockdb rm postgresql mysql`,
+	Args:    cobra.MinimumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ctx, cancel := context.WithTimeout(
 			cmd.Context(),
