@@ -10,12 +10,12 @@ import (
 )
 
 var upCmd = &cobra.Command{
-	Use:     "up <container>",
+	Use:     "up <container>...",
 	Aliases: []string{"start"},
 	Short:   "Start a stopped database container",
 	Long:    `Start an existing, stopped Docker database container by its ID or name.`,
 	Example: `  dockdb up postgresql`,
-	Args:    cobra.ExactArgs(1),
+	Args:    cobra.MinimumNArgs(1),
 
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cli, err := docker.NewClient()
@@ -30,7 +30,7 @@ var upCmd = &cobra.Command{
 		)
 		defer cancel()
 
-		if err := docker.UpContainer(ctx, cli, args[0]); err != nil {
+		if err := docker.UpContainer(ctx, cli, args[0:]); err != nil {
 			return err
 		}
 

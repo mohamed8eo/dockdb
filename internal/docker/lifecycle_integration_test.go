@@ -55,17 +55,17 @@ func TestContainerLifecycleIntegration(t *testing.T) {
 		_, _ = cli.ContainerRemove(context.Background(), created.ID, client.ContainerRemoveOptions{Force: true})
 	})
 
-	if err := UpContainer(ctx, cli, created.ID); err != nil {
+	if err := UpContainer(ctx, cli, []string{created.ID}); err != nil {
 		t.Fatalf("start test container: %v", err)
 	}
 	assertContainerRunning(t, ctx, cli, created.ID, true)
 
-	if err := DownContainer(ctx, cli, created.ID); err != nil {
+	if err := DownContainer(ctx, cli, []string{created.ID}); err != nil {
 		t.Fatalf("stop test container: %v", err)
 	}
 	assertContainerRunning(t, ctx, cli, created.ID, false)
 
-	if err := DeleteContainer(ctx, cli, created.ID); err != nil {
+	if err := DeleteContainer(ctx, cli, []string{created.ID}); err != nil {
 		t.Fatalf("delete test container: %v", err)
 	}
 	if _, err := cli.ContainerInspect(ctx, created.ID, client.ContainerInspectOptions{}); err == nil {

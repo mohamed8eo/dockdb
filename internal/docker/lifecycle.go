@@ -47,43 +47,50 @@ func ListContainer(ctx context.Context, cli *client.Client, all bool) error {
 	return nil
 }
 
-func UpContainer(ctx context.Context, cli *client.Client, id string) error {
-	id = strings.TrimSpace(id)
-
-	if id == "" {
+func UpContainer(ctx context.Context, cli *client.Client, containerIDs []string) error {
+	if len(containerIDs) == 0 {
 		return fmt.Errorf("container ID cannot be empty")
 	}
 
-	result, err := cli.ContainerInspect(
-		ctx,
-		id,
-		client.ContainerInspectOptions{},
-	)
-	if err != nil {
-		return fmt.Errorf("failed to inspect container %q: %w", id, err)
+	for _, id := range containerIDs {
+
+		id = strings.TrimSpace(id)
+
+		if id == "" {
+			return fmt.Errorf("container ID cannot be empty")
+		}
+
+		result, err := cli.ContainerInspect(
+			ctx,
+			id,
+			client.ContainerInspectOptions{},
+		)
+		if err != nil {
+			return fmt.Errorf("failed to inspect container %q: %w", id, err)
+		}
+
+		if result.Container.State == nil {
+			return fmt.Errorf("container %q has no state information", id)
+		}
+
+		name := strings.TrimPrefix(result.Container.Name, "/")
+		state := result.Container.State
+
+		if state.Running {
+			logger.Info("Container is already running", "name", name)
+			continue
+		}
+
+		if state.Dead {
+			return fmt.Errorf("container %q is dead", name)
+		}
+
+		if err := startContainer(ctx, cli, name, id); err != nil {
+			return fmt.Errorf("failed to start container %q: %w", name, err)
+		}
+
+		logger.Info("Container started", "name", name)
 	}
-
-	if result.Container.State == nil {
-		return fmt.Errorf("container %q has no state information", id)
-	}
-
-	name := strings.TrimPrefix(result.Container.Name, "/")
-	state := result.Container.State
-
-	if state.Running {
-		logger.Info("Container is already running")
-		return nil
-	}
-
-	if state.Dead {
-		return fmt.Errorf("container %q is dead", name)
-	}
-
-	if err := startContainer(ctx, cli, name, id); err != nil {
-		return fmt.Errorf("failed to start container %q: %w", name, err)
-	}
-
-	logger.Info("Container started", "name", name)
 
 	return nil
 }
@@ -118,8 +125,8 @@ func DownContainer(ctx context.Context, cli *client.Client, containerIDs []strin
 		state := result.Container.State
 
 		if !state.Running {
-			logger.Info("Container is already Stoped")
-			return nil
+			logger.Info("Container is already stopped", "name", name)
+			continue
 		}
 
 		if state.Dead {
@@ -130,7 +137,7 @@ func DownContainer(ctx context.Context, cli *client.Client, containerIDs []strin
 			return fmt.Errorf("failed to stop container %q: %w", name, err)
 		}
 
-		logger.Info("Container stoped", "name", name)
+		logger.Info("Container stopped", "name", name)
 
 	}
 	return nil
@@ -158,7 +165,7 @@ func DeleteContainer(ctx context.Context, cli *client.Client, containerIDs []str
 		name := strings.TrimPrefix(result.Container.Name, "/")
 		state := result.Container.State
 		if state.Running {
-			if err := stopContainer(ctx, cli, name, id); err != nil {
+			if err = stopContainer(ctx, cli, name, id); err != nil {
 				return fmt.Errorf("failed to stop container %q: %w", name, err)
 			}
 		} // TODO: Func Remove the container
